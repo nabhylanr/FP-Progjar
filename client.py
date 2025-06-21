@@ -30,7 +30,7 @@ class TugOfWarClient:
             'winner': None
         }
         # Ganti 'localhost' dengan IP server untuk multiplayer antar laptop
-        self.server_address = ('192.168.0.31', 55555)  # Untuk testing lokal
+        self.server_address = ('192.168.0.125', 55555)  # Untuk testing lokal
         # self.server_address = ('192.168.1.100', 55555)  # Contoh IP server untuk multiplayer
         self.last_key_time = {'a': 0, 'd': 0}  # Anti-spam
         

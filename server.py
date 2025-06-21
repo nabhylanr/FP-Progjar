@@ -6,7 +6,7 @@ import logging
 import json
 import threading
 from concurrent.futures import ThreadPoolExecutor
-from game_server import TugOfWarGameServer
+from game_server import TugOfWarGameServer  # Pastikan file ini ada
 
 # Instance global game server
 game_server = TugOfWarGameServer()
@@ -15,31 +15,26 @@ def ProcessTheClient(connection, address):
     """
     Handle client connection for Tug of War game
     """
-    client_id = f"{address[0]}:{address[1]}:{int(time.time() * 1000) % 10000}"  # More unique ID
-    
+    client_id = f"{address[0]}:{address[1]}:{int(time.time() * 1000) % 10000}"
     print(f"New client connected: {client_id}")
-    
+
     # Register client to game
     game_server.add_client(client_id, connection)
-    
+
     rcv = ""
     try:
         while True:
             try:
-                # Set socket timeout to detect disconnections
                 connection.settimeout(30.0)
                 data = connection.recv(1024)
                 
                 if data:
-                    # Decode bytes to string
                     d = data.decode()
                     rcv = rcv + d
                     
-                    # Process complete messages (ended with \n)
                     while '\n' in rcv:
                         line, rcv = rcv.split('\n', 1)
                         if line.strip():
-                            # Process game command
                             try:
                                 command = json.loads(line.strip())
                                 print(f"Command from {client_id}: {command}")
@@ -47,12 +42,10 @@ def ProcessTheClient(connection, address):
                             except json.JSONDecodeError as e:
                                 logging.warning(f"Invalid JSON from {client_id}: {line} | Error: {e}")
                 else:
-                    # Client disconnected
                     print(f"Client {client_id} disconnected (no data)")
                     break
                     
             except socket.timeout:
-                # Send ping to check if client is still alive
                 try:
                     ping_msg = json.dumps({'command': 'PING'}) + '\n'
                     connection.send(ping_msg.encode())
@@ -70,7 +63,6 @@ def ProcessTheClient(connection, address):
     except Exception as e:
         logging.warning(f"Error handling client {client_id}: {e}")
     finally:
-        # Remove client from game
         print(f"Cleaning up client {client_id}")
         game_server.remove_client(client_id)
         try:
@@ -78,7 +70,7 @@ def ProcessTheClient(connection, address):
         except:
             pass
 
-def Server():
+def Server(port=55555):
     """
     Main server function
     """
@@ -87,21 +79,19 @@ def Server():
     my_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     
     try:
-        my_socket.bind(('0.0.0.0', 55555))
-        my_socket.listen(20)  # Increased backlog
+        my_socket.bind(('0.0.0.0', port))
+        my_socket.listen(20)
         
-        # Start game timer thread
         game_timer_thread = threading.Thread(target=game_server.game_loop, daemon=True)
         game_timer_thread.start()
         
         print("="*50)
-        print("🎮 TUG OF WAR GAME SERVER STARTED")
+        print(f"🎮 TUG OF WAR GAME SERVER STARTED ON PORT {port}")
         print("="*50)
-        print(f"📡 Listening on port 55555")
-        print(f"🔗 Connect clients to: localhost:55555")
+        print(f"📡 Listening on port {port}")
         print("="*50)
         
-        with ThreadPoolExecutor(max_workers=50) as executor:  # Increased max workers
+        with ThreadPoolExecutor(max_workers=50) as executor:
             client_counter = 0
             
             while True:
@@ -111,19 +101,16 @@ def Server():
                     
                     print(f"🆕 Client #{client_counter} connected from {client_address}")
                     
-                    # Submit client handler to thread pool
                     future = executor.submit(ProcessTheClient, connection, client_address)
                     active_clients.append(future)
                     
-                    # Clean up finished futures
                     active_clients = [f for f in active_clients if f.running()]
                     
-                    # Show statistics
                     active_count = len(active_clients)
                     left_count = len([c for c in game_server.clients.values() if c.get('team') == 'left'])
                     right_count = len([c for c in game_server.clients.values() if c.get('team') == 'right'])
                     
-                    print(f"📊 Active connections: {active_count} | Left team: {left_count} | Right team: {right_count}")
+                    print(f"📊 Active: {active_count} | Left: {left_count} | Right: {right_count}")
                     
                 except Exception as e:
                     logging.error(f"Error accepting connection: {e}")
@@ -135,19 +122,19 @@ def Server():
         game_server.running = False
         my_socket.close()
 
-def main():
-    # Setup logging
+def main(port):
     logging.basicConfig(
         level=logging.INFO,
         format='%(asctime)s - %(levelname)s - %(message)s'
     )
     
     try:
-        Server()
+        Server(port)
     except KeyboardInterrupt:
         print("\n🛑 Server stopped by user")
     except Exception as e:
         print(f"❌ Server error: {e}")
 
 if __name__ == "__main__":
-    main()
+    port = int(sys.argv[1]) if len(sys.argv) > 1 else 55555
+    main(port)
