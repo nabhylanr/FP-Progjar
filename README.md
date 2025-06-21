@@ -37,14 +37,22 @@ Anda akan melihat output yang menandakan server telah berjalan dan siap menerima
 ==================================================
 ```
 
-4. Jalankan Client:
+### 4. Jalankan Client:
 - Pada setiap komputer client (atau di terminal baru pada komputer yang sama), navigasikan ke direktori game.
 - Jalankan client dengan perintah: 
 `python client.py`
 - Sebuah window Pygame akan terbuka. Ulangi langkah ini untuk setiap pemain yang ingin bergabung. Server akan secara otomatis menyeimbangkan jumlah pemain di tim kiri dan kanan.
 
-5. Mulai Bermain:
+### 5. Mulai Bermain:
 - Setelah ada minimal satu pemain di setiap tim, salah satu pemain dapat menekan tombol SPACE untuk memulai permainan.
 - Pemain di tim kiri menekan tombol 'A' untuk menarik.
 - Pemain di tim kanan menekan tombol 'D' untuk menarik.
 - Permainan berakhir ketika salah satu tim berhasil menarik bar ke ujung atau ketika waktu habis. Game akan otomatis restart setelah 5 detik.
+
+## Preview Aplikasi
+### Client 1 
+<img width="1101" alt="Screenshot 2025-06-21 at 12 17 48" src="https://github.com/user-attachments/assets/10d662b7-502f-4298-8ba5-e2370481db1d" /> <br> 
+### Client 2
+<img width="864" alt="Screenshot 2025-06-21 at 12 18 31" src="https://github.com/user-attachments/assets/797a1267-075f-46c7-ac94-f49543a38c2b" />
+
+
