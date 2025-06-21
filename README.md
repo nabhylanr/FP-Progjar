@@ -1,4 +1,4 @@
-# Instruksi Menjalankan Server dan Client
+# Cara Menjalankan Server dan Client
 Berikut adalah langkah-langkah untuk menyiapkan dan menjalankan game ini.
 
 ## a. Prasyarat
