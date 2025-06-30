@@ -58,6 +58,16 @@ class TugOfWarGameServer:
                 team = self.clients[client_id]['team']
                 del self.clients[client_id]
                 print(f"Client {client_id} left from team {team}")
+                
+                # Check if game should be paused due to lack of players
+                left_count = sum(1 for c in self.clients.values() if c.get('team') == 'left')
+                right_count = sum(1 for c in self.clients.values() if c.get('team') == 'right')
+                
+                if (left_count == 0 or right_count == 0) and self.game_state.game_active:
+                    print("Game paused - not enough players on both teams")
+                    self.game_state.game_active = False
+                    self.game_state.winner = None
+                
                 self.broadcast_game_state()
     
     def handle_command(self, client_id, command):
@@ -73,6 +83,10 @@ class TugOfWarGameServer:
         elif cmd_type == 'JOIN_GAME':
             # Handle explicit join request (optional)
             print(f"Client {client_id} requested to join game")
+            self.broadcast_game_state()  # Send current state to joining client
+        elif cmd_type == 'PING':
+            # Respond to ping
+            self.send_to_client(client_id, {'command': 'PONG'})
         else:
             logging.warning(f"Unknown command from {client_id}: {cmd_type}")
     
@@ -112,6 +126,9 @@ class TugOfWarGameServer:
                     self.end_game('LEFT')
                 elif self.game_state.bar_position >= 50:
                     self.end_game('RIGHT')
+                else:
+                    # Broadcast state update immediately for responsive gameplay
+                    self.broadcast_game_state()
             else:
                 print(f"Invalid button press: client {client_id} (team {client_team}) pressed {direction}")
     
@@ -130,25 +147,48 @@ class TugOfWarGameServer:
                 })
                 return
             
+            # Reset game state
             self.game_state.reset_game()
             print(f"New game started! Teams - Left: {left_count}, Right: {right_count}")
+            
+            # Broadcast game start
+            self.broadcast_message({
+                'command': 'GAME_START',
+                'timer': self.game_state.timer,
+                'bar_position': self.game_state.bar_position
+            })
+            
             self.broadcast_game_state()
     
     def end_game(self, winner):
         """End current game"""
-        self.game_state.game_active = False
-        self.game_state.winner = winner
-        
-        self.broadcast_message({
-            'command': 'GAME_END',
-            'winner': winner,
-            'bar_position': self.game_state.bar_position
-        })
-        
-        print(f"Game ended! Winner: {winner}, Final position: {self.game_state.bar_position}")
-        
-        # Auto-restart after 5 seconds
-        threading.Timer(5.0, self.start_new_game).start()
+        with self.lock:
+            self.game_state.game_active = False
+            self.game_state.winner = winner
+            
+            print(f"Game ended! Winner: {winner}, Final position: {self.game_state.bar_position}")
+            
+            # Broadcast game end immediately
+            self.broadcast_message({
+                'command': 'GAME_END',
+                'winner': winner,
+                'bar_position': self.game_state.bar_position,
+                'final_timer': self.game_state.timer
+            })
+            
+            # Also broadcast updated game state
+            self.broadcast_game_state()
+            
+            # Auto-restart after 5 seconds
+            def auto_restart():
+                time.sleep(5)
+                if not self.running:
+                    return
+                print("Auto-restarting game...")
+                self.start_new_game()
+            
+            restart_thread = threading.Thread(target=auto_restart, daemon=True)
+            restart_thread.start()
     
     def send_to_client(self, client_id, message):
         """Send message to specific client"""
@@ -157,11 +197,13 @@ class TugOfWarGameServer:
                 socket_obj = self.clients[client_id]['socket']
                 msg = json.dumps(message) + '\n'
                 socket_obj.send(msg.encode())
+                return True
         except Exception as e:
             logging.warning(f"Failed to send to {client_id}: {e}")
             # Remove dead client
             self.remove_client(client_id)
-    
+            return False
+
     def broadcast_message(self, message):
         """Broadcast message to all clients"""
         msg = json.dumps(message) + '\n'

@@ -7,6 +7,7 @@ import json
 import threading
 from concurrent.futures import ThreadPoolExecutor
 from game_server import TugOfWarGameServer
+from http_server import WebServerThread  # Import web server
 
 # Instance global game server
 game_server = TugOfWarGameServer()
@@ -94,12 +95,20 @@ def Server():
         game_timer_thread = threading.Thread(target=game_server.game_loop, daemon=True)
         game_timer_thread.start()
         
-        print("="*50)
+        # Start web server untuk dashboard
+        web_server = WebServerThread(game_server, port=8080)
+        web_server.start()
+        
+        print("="*60)
         print("🎮 TUG OF WAR GAME SERVER STARTED")
-        print("="*50)
-        print(f"📡 Listening on port 55555")
-        print(f"🔗 Connect clients to: localhost:55555")
-        print("="*50)
+        print("="*60)
+        print(f"📡 Game Server: localhost:55555")
+        print(f"🌐 Web Dashboard: http://localhost:8080/dashboard")
+        print(f"📊 API Status: http://localhost:8080/api/status")
+        print("="*60)
+        print("📋 Connect game clients to: localhost:55555")
+        print("🖥️  View game status at: http://localhost:8080/dashboard")
+        print("="*60)
         
         with ThreadPoolExecutor(max_workers=50) as executor:  # Increased max workers
             client_counter = 0
@@ -133,6 +142,8 @@ def Server():
     finally:
         print("🛑 Server shutting down...")
         game_server.running = False
+        if 'web_server' in locals():
+            web_server.running = False
         my_socket.close()
 
 def main():
